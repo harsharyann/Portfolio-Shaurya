@@ -591,13 +591,14 @@
         });
 
         // Switch Active Page Tab Editor
-        async function switchPage(pageName) {
-            activePage = pageName;
+        async function switchPage(tabName) {
+            // Keep activePage pointing to index.html since everything is in 1 page now!
+            activePage = 'index.html';
             
             // Highlight current tab button
             document.querySelectorAll('.tab-btn').forEach(btn => {
                 const btnPage = btn.getAttribute('data-page');
-                if (btnPage === pageName) {
+                if (btnPage === tabName) {
                     btn.className = 'tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all text-primary bg-white shadow-sm border border-primary/10';
                 } else {
                     btn.className = 'tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all text-secondary hover:bg-white/50 hover:text-primary';
@@ -605,19 +606,19 @@
             });
 
             // Update header title description
-            document.getElementById('current-page-title').innerText = pageTitles[pageName];
+            document.getElementById('current-page-title').innerText = pageTitles[tabName];
 
             // Toggle visibility of fields divs
             document.querySelectorAll('.editor-fields').forEach(div => {
                 div.classList.add('hidden');
             });
-            const targetFieldsDiv = document.getElementById(`fields-${pageName}`);
+            const targetFieldsDiv = document.getElementById(`fields-${tabName}`);
             if (targetFieldsDiv) {
                 targetFieldsDiv.classList.remove('hidden');
             }
 
-            // Load contents of the page
-            await fetchPageContents(pageName);
+            // Always load contents of index.html page
+            await fetchPageContents('index.html');
         }
 
         // Fetch Page Contents
@@ -654,9 +655,8 @@
                 const doc = parser.parseFromString(pagesCache[pageName].raw, 'text/html');
                 pagesCache[pageName].doc = doc;
 
-                // Prepopulate form fields based on activePage edit ids
-                const fieldsDiv = document.getElementById(`fields-${pageName}`);
-                if (fieldsDiv) {
+                // Prepopulate form fields for ALL tabs in the single page doc
+                document.querySelectorAll('.editor-fields').forEach(fieldsDiv => {
                     const inputs = fieldsDiv.querySelectorAll('[data-field-id]');
                     inputs.forEach(input => {
                         const fieldId = input.getAttribute('data-field-id');
@@ -668,7 +668,7 @@
                             input.value = '';
                         }
                     });
-                }
+                });
 
                 loader.classList.add('hidden');
                 form.classList.remove('hidden');
@@ -695,20 +695,20 @@
                 if (!cache || !cache.doc) return;
 
                 const doc = cache.doc;
-                const fieldsDiv = document.getElementById(`fields-${activePage}`);
-                if (!fieldsDiv) return;
 
                 stepText.innerText = 'Applying edits to HTML...';
                 prog.style.width = '50%';
 
-                // Read values from form fields and inject into parsed document elements
-                const inputs = fieldsDiv.querySelectorAll('[data-field-id]');
-                inputs.forEach(input => {
-                    const fieldId = input.getAttribute('data-field-id');
-                    const el = doc.querySelector(`[data-edit-id="${fieldId}"]`);
-                    if (el) {
-                        el.innerText = input.value;
-                    }
+                // Read values from ALL form fields and inject into parsed document elements
+                document.querySelectorAll('.editor-fields').forEach(fieldsDiv => {
+                    const inputs = fieldsDiv.querySelectorAll('[data-field-id]');
+                    inputs.forEach(input => {
+                        const fieldId = input.getAttribute('data-field-id');
+                        const el = doc.querySelector(`[data-edit-id="${fieldId}"]`);
+                        if (el) {
+                            el.innerText = input.value;
+                        }
+                    });
                 });
 
                 stepText.innerText = 'Formatting document output...';
